@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración | MERCA TO-DO</title>
+    <meta name="author" content="suaxxa-dev">
+    <link rel="icon" href="img/ICON.png" type="image/png" sizes="16x16">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <!-- Pantalla de Acceso Denegado (oculta por defecto) -->
+    <div id="access-denied-screen" class="denied-screen" style="display: none;">
+        <i class="fa-solid fa-shield-halved"></i>
+        <h2>Acceso Restringido</h2>
+        <p>No tienes los permisos necesarios para acceder al Panel de Administración de MERCA TO-DO. Inicia sesión con una cuenta autorizada.</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <a href="Login.html" class="btn-primary" style="text-decoration: none;">Iniciar Sesión</a>
+            <a href="Mainpage.html" class="btn-secondary" style="text-decoration: none;">Ir a la Tienda</a>
+        </div>
+    </div>
+
+    <!-- Layout Principal del Administrador -->
+    <div id="admin-app" class="admin-wrapper" style="display: none;">
+        
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="Mainpage.html" class="sidebar-brand">
+                    MERCA <span>TO-DO</span>
+                    <span class="admin-badge" id="badge-sidebar-role">ADMIN</span>
+                </a>
+            </div>
+
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="admin-avatar">AP</div>
+                <div class="sidebar-user-info">
+                    <p class="sidebar-user-name" id="admin-name">Cargando...</p>
+                    <p class="sidebar-user-role" id="admin-role-label">
+                        <i class="fa-solid fa-crown"></i> AdminPro
+                    </p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">General</div>
+                <button type="button" class="nav-btn is-active" data-panel="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button type="button" class="nav-btn" data-panel="sales-report">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>Reporte de Ventas</span>
+                </button>
+
+                <div class="nav-section-title">Operaciones</div>
+                <button type="button" class="nav-btn" data-panel="orders">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span>Pedidos</span>
+                    <span class="badge-pill" id="badge-orders-count">0</span>
+                </button>
+                <button type="button" class="nav-btn" data-panel="stock">
+                    <i class="fa-solid fa-warehouse"></i>
+                    <span>Control de Stock</span>
+                </button>
+                <button type="button" class="nav-btn" data-panel="products">
+                    <i class="fa-solid fa-tags"></i>
+                    <span>Catálogo Productos</span>
+                </button>
+
+                <!-- Secciones Exclusivas de AdminPro -->
+                <div class="nav-section-title sec-adminpro-only">Seguridad y Roles</div>
+                <button type="button" class="nav-btn sec-adminpro-only" data-panel="users">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Gestión de Usuarios</span>
+                </button>
+                <button type="button" class="nav-btn sec-adminpro-only" data-panel="audit">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span>Auditoría del Sistema</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="Mainpage.html" class="nav-btn btn-return-store">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Volver a la Tienda</span>
+                </a>
+                <button type="button" class="nav-btn btn-logout" id="btn-admin-logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="admin-main">
+            <!-- Topbar -->
+            <header class="admin-topbar">
+                <div class="topbar-title">
+                    <h2 id="topbar-view-title">Dashboard General</h2>
+                </div>
+                <div class="topbar-actions">
+                    <span class="topbar-badge-role role-adminpro" id="topbar-role-pill">
+                        <i class="fa-solid fa-shield-check"></i> <span id="topbar-role-text">Admin Pro</span>
+                    </span>
+                    <button type="button" class="btn-refresh" id="btn-global-refresh" title="Actualizar datos">
+                        <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+                    </button>
+                </div>
+            </header>
+
+            <div class="admin-content">
+                
+                <!-- =========================================
+                     PANEL 1: DASHBOARD
+                     ========================================= -->
+                <section class="admin-panel is-active" id="panel-dashboard">
+                    <!-- KPI Cards Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card stat-sales">
+                            <div class="stat-icon-box"><i class="fa-solid fa-dollar-sign"></i></div>
+                            <div class="stat-details">
+                                <h4>Ingresos Totales</h4>
+                                <div class="stat-value" id="kpi-sales">$ 0.00</div>
+                                <div class="stat-hint">Excluye pedidos cancelados</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card stat-orders">
+                            <div class="stat-icon-box"><i class="fa-solid fa-box-open"></i></div>
+                            <div class="stat-details">
+                                <h4>Total Pedidos</h4>
+                                <div class="stat-value" id="kpi-orders">0</div>
+                                <div class="stat-hint" id="kpi-ticket">Ticket prom: $ 0</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card stat-users">
+                            <div class="stat-icon-box"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-details">
+                                <h4>Clientes Registrados</h4>
+                                <div class="stat-value" id="kpi-users">0</div>
+                                <div class="stat-hint">Cuentas activas en la BD</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card stat-stock">
+                            <div class="stat-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="stat-details">
+                                <h4>Inventario / Stock</h4>
+                                <div class="stat-value" id="kpi-stock">0</div>
+                                <div class="stat-hint" id="kpi-low-stock">0 productos con stock bajo</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumen de Pedidos y Accesos -->
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <h3 style="font-size: 1.1rem; font-weight: 700;">Últimos Pedidos Registrados</h3>
+                            <button type="button" class="btn-secondary" onclick="adminSwitchPanel('orders')">
+                                Ver Todos los Pedidos <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Cliente</th>
+                                        <th>Fecha</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-recent-orders">
+                                    <tr><td colspan="6" style="text-align: center;">Cargando pedidos...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================
+                     PANEL 2: REPORTE DE VENTAS POR USUARIO
+                     ========================================= -->
+                <section class="admin-panel" id="panel-sales-report">
+                    <div class="panel-header">
+                        <div class="panel-header-left">
+                            <h3>Reporte de Ventas por Usuario</h3>
+                            <p>Análisis de compras acumuladas, clientes más activos y volumen de ventas.</p>
+                        </div>
+                        <div class="panel-header-actions">
+                            <button type="button" class="btn-secondary" id="btn-export-sales-csv">
+                                <i class="fa-solid fa-file-csv"></i> Exportar CSV
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="window.print()">
+                                <i class="fa-solid fa-print"></i> Imprimir Reporte
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <div class="search-filter-wrap">
+                                <div class="search-box-relative">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="search-sales-user" class="admin-search-input" placeholder="Buscar por nombre o correo de cliente...">
+                                </div>
+                            </div>
+                            <span id="sales-report-count" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">0 usuarios</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table" id="table-sales-report">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Cliente</th>
+                                        <th>Correo</th>
+                                        <th>Rol</th>
+                                        <th>Pedidos Totales</th>
+                                        <th>Monto Acumulado</th>
+                                        <th>Última Compra</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-sales-report">
+                                    <tr><td colspan="7" style="text-align: center;">Cargando reporte de ventas...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================
+                     PANEL 3: GESTIÓN DE PEDIDOS
+                     ========================================= -->
+                <section class="admin-panel" id="panel-orders">
+                    <div class="panel-header">
+                        <div class="panel-header-left">
+                            <h3>Gestión de Pedidos</h3>
+                            <p>Supervisa todos los pedidos y actualiza su estado logístico en tiempo real.</p>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <div class="search-filter-wrap">
+                                <div class="search-box-relative">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="search-orders" class="admin-search-input" placeholder="Buscar por código MT-XXXXX o cliente...">
+                                </div>
+                                <select id="filter-order-status" class="filter-select">
+                                    <option value="">Todos los Estados</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="enviado">Enviado</option>
+                                    <option value="entregado">Entregado</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Cliente</th>
+                                        <th>Fecha</th>
+                                        <th>Artículos</th>
+                                        <th>Total</th>
+                                        <th>Estado Actual</th>
+                                        <th>Cambiar Estado</th>
+                                        <th>Detalles</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-all-orders">
+                                    <tr><td colspan="8" style="text-align: center;">Cargando pedidos...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================
+                     PANEL 4: CONTROL DE STOCK
+                     ========================================= -->
+                <section class="admin-panel" id="panel-stock">
+                    <div class="panel-header">
+                        <div class="panel-header-left">
+                            <h3>Control de Stock e Inventario</h3>
+                            <p>Monitorea existencias en tiempo real y ajusta el stock de productos.</p>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <div class="search-filter-wrap">
+                                <div class="search-box-relative">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="search-stock" class="admin-search-input" placeholder="Buscar por producto, SKU o marca...">
+                                </div>
+                                <select id="filter-stock-category" class="filter-select">
+                                    <option value="">Todas las Categorías</option>
+                                    <option value="tecnologia">Tecnología</option>
+                                    <option value="hogar">Hogar</option>
+                                    <option value="moda">Moda</option>
+                                    <option value="herramientas">Herramientas</option>
+                                    <option value="deportes">Deportes</option>
+                                    <option value="accesorios">Accesorios</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>SKU</th>
+                                        <th>Categoría</th>
+                                        <th>Precio</th>
+                                        <th>Stock Actual</th>
+                                        <th>Nivel</th>
+                                        <th>Ajustar Stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-stock-table">
+                                    <tr><td colspan="7" style="text-align: center;">Cargando inventario...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================
+                     PANEL 5: CATÁLOGO DE PRODUCTOS
+                     ========================================= -->
+                <section class="admin-panel" id="panel-products">
+                    <div class="panel-header">
+                        <div class="panel-header-left">
+                            <h3>Catálogo de Productos</h3>
+                            <p>Administra los productos de la tienda siguiendo categorías y filtros oficiales.</p>
+                        </div>
+                        <div class="panel-header-actions">
+                            <button type="button" class="btn-primary" id="btn-open-create-product">
+                                <i class="fa-solid fa-plus"></i> Agregar Nuevo Producto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <div class="search-filter-wrap">
+                                <div class="search-box-relative">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="search-products" class="admin-search-input" placeholder="Buscar producto en catálogo...">
+                                </div>
+                                <select id="filter-product-cat" class="filter-select">
+                                    <option value="">Todas las Categorías</option>
+                                    <option value="tecnologia">Tecnología</option>
+                                    <option value="hogar">Hogar</option>
+                                    <option value="moda">Moda</option>
+                                    <option value="herramientas">Herramientas</option>
+                                    <option value="deportes">Deportes</option>
+                                    <option value="accesorios">Accesorios</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>SKU</th>
+                                        <th>Categoría</th>
+                                        <th>Subcategoría</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-products-table">
+                                    <tr><td colspan="7" style="text-align: center;">Cargando catálogo...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================
+                     PANEL 6: GESTIÓN DE USUARIOS Y ROLES (AdminPro)
+                     ========================================= -->
+                <section class="admin-panel" id="panel-users">
+                    <div class="panel-header">
+                        <div class="panel-header-left">
+                            <h3>Gestión de Usuarios y Roles</h3>
+                            <p>Asigna roles de <strong>Admin Junior</strong> con permisos de stock y reporte de ventas, o <strong>Admin Pro</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <div class="search-filter-wrap">
+                                <div class="search-box-relative">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="search-users" class="admin-search-input" placeholder="Buscar por nombre o correo...">
+                                </div>
+                                <select id="filter-user-role" class="filter-select">
+                                    <option value="">Todos los Roles</option>
+                                    <option value="user">Usuario Regular</option>
+                                    <option value="adminjunior">Admin Junior</option>
+                                    <option value="adminpro">Admin Pro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Correo Electrónico</th>
+                                        <th>Fecha Registro</th>
+                                        <th>Pedidos Hechos</th>
+                                        <th>Rol Actual</th>
+                                        <th>Asignar Rol</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-users-table">
+                                    <tr><td colspan="7" style="text-align: center;">Cargando usuarios...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================
+                     PANEL 7: AUDITORÍA DE USUARIOS Y SISTEMA (AdminPro)
+                     ========================================= -->
+                <section class="admin-panel" id="panel-audit">
+                    <div class="panel-header">
+                        <div class="panel-header-left">
+                            <h3>Auditoría de Usuarios y Sistema</h3>
+                            <p>Registro histórico y trazabilidad de acciones administrativas, cambios de roles y stock.</p>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header-tools">
+                            <div class="search-filter-wrap">
+                                <select id="filter-audit-action" class="filter-select">
+                                    <option value="">Todas las Acciones</option>
+                                    <option value="CAMBIO_ROL">Cambio de Roles</option>
+                                    <option value="STOCK_UPDATE">Ajustes de Stock</option>
+                                    <option value="ESTADO_PEDIDO">Cambios de Estado de Pedido</option>
+                                    <option value="CREAR_PRODUCTO">Creación de Productos</option>
+                                    <option value="ELIMINAR_PRODUCTO">Eliminación de Productos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha / Hora</th>
+                                        <th>Administrador</th>
+                                        <th>Tipo de Acción</th>
+                                        <th>Detalles de la Operación</th>
+                                        <th>IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-audit-table">
+                                    <tr><td colspan="5" style="text-align: center;">Cargando logs de auditoría...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- =========================================
+         MODALES
+         ========================================= -->
+
+    <!-- Modal Detalle de Pedido -->
+    <div class="modal-overlay" id="modal-order-details">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-order-title">Detalle del Pedido</h3>
+                <button type="button" class="modal-close" onclick="adminCloseModal('modal-order-details')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-order-body">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="adminCloseModal('modal-order-details')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear / Editar Producto -->
+    <div class="modal-overlay" id="modal-product-form">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-product-title">Agregar Nuevo Producto</h3>
+                <button type="button" class="modal-close" onclick="adminCloseModal('modal-product-form')">&times;</button>
+            </div>
+            <form id="form-product">
+                <div class="modal-body">
+                    <input type="hidden" id="prod-id" name="id">
+
+                    <div class="form-group">
+                        <label for="prod-nombre">Nombre del Producto *</label>
+                        <input type="text" id="prod-nombre" class="form-control" placeholder="Ej: iPhone 15 Pro Max 256GB" required>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="prod-categoria">Categoría Principal *</label>
+                            <select id="prod-categoria" class="form-control" required>
+                                <option value="tecnologia">Tecnología</option>
+                                <option value="hogar">Hogar</option>
+                                <option value="moda">Moda</option>
+                                <option value="herramientas">Herramientas</option>
+                                <option value="deportes">Deportes</option>
+                                <option value="accesorios">Accesorios</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="prod-subcategoria">Subcategoría / Filtro</label>
+                            <input type="text" id="prod-subcategoria" class="form-control" placeholder="Ej: Portátiles, Calzado, Cocina...">
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="prod-precio">Precio ($ COP) *</label>
+                            <input type="number" step="1" id="prod-precio" class="form-control" placeholder="Ej: 650000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prod-stock">Stock Inicial *</label>
+                            <input type="number" id="prod-stock" class="form-control" placeholder="Ej: 50" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="prod-sku">Código SKU</label>
+                            <input type="text" id="prod-sku" class="form-control" placeholder="Ej: SKU-IPHONE15">
+                        </div>
+                        <div class="form-group">
+                            <label for="prod-marca">Marca</label>
+                            <input type="text" id="prod-marca" class="form-control" placeholder="Ej: Apple, Nike, Samsung...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prod-img">Ruta de Imagen</label>
+                        <input type="text" id="prod-img" class="form-control" placeholder="Ej: img/cat-tecnologia-dell-laptop.jpg">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prod-descripcion">Descripción del Producto</label>
+                        <textarea id="prod-descripcion" class="form-control" rows="3" placeholder="Detalles técnicos, características y garantía..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="adminCloseModal('modal-product-form')">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btn-save-product">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="admin-toast" class="admin-toast">
+        <i class="fa-solid fa-circle-check" id="toast-icon"></i>
+        <span id="toast-message">Operación realizada</span>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+
+</html>

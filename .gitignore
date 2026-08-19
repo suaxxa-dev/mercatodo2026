@@ -1,0 +1,4 @@
+node_modules/
+mercatodo.db
+package-lock.json
+.env
