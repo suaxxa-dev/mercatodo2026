@@ -7,7 +7,8 @@
     }
 
     function mercaMoney(n) {
-        var copValue = Math.round(Number(n) * 4000);
+        var num = Number(n) || 0;
+        var copValue = num >= 1000 ? Math.round(num) : Math.round(num * 4000);
         return '$ ' + copValue.toLocaleString('es-CO');
     }
 

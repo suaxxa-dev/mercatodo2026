@@ -137,8 +137,71 @@
     }
 
     function mercaMoney(n) {
-        var copValue = Math.round(Number(n) * 4000);
+        var num = Number(n) || 0;
+        var copValue = num >= 1000 ? Math.round(num) : Math.round(num * 4000);
         return '$ ' + copValue.toLocaleString('es-CO');
+    }
+
+    async function loadDynamicCatalog() {
+        try {
+            var res = await fetch('/api/products');
+            if (!res.ok) return;
+            var list = await res.json();
+            if (!Array.isArray(list) || list.length === 0) return;
+
+            var newCatalog = {
+                tecnologia: [],
+                hogar: [],
+                moda: [],
+                herramientas: [],
+                deportes: [],
+                accesorios: []
+            };
+
+            list.forEach(function (p) {
+                var rawCat = (p.categoria || 'tecnologia').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                var catKey = newCatalog[rawCat] !== undefined ? rawCat : 'tecnologia';
+
+                var precioNum = parseFloat(p.precio) || 0;
+                var precioLabel = p.precio_label || p.precioLabel || mercaMoney(precioNum);
+                var prodObj = {
+                    id: p.id,
+                    nombre: p.nombre,
+                    precioNum: precioNum,
+                    precioLabel: precioLabel,
+                    img: p.img || 'img/cat-tecnologia-dell-laptop.jpg',
+                    stars: 5,
+                    descPct: 0,
+                    marca: p.marca || 'MERCA TO-DO',
+                    tipo: 'nuevo',
+                    temas: p.subcategoria ? [p.subcategoria.toLowerCase()] : ['general'],
+                    secciones: ['hombre', 'mujer', 'accesorios', 'deportes']
+                };
+                newCatalog[catKey].push(prodObj);
+            });
+
+            Object.keys(newCatalog).forEach(function (k) {
+                if (newCatalog[k].length > 0) {
+                    CATALOG[k] = newCatalog[k];
+                }
+            });
+
+            SEARCH_DB = [];
+            Object.keys(CATALOG).forEach(function (k) {
+                CATALOG[k].forEach(function (p) {
+                    SEARCH_DB.push({
+                        nombre: p.nombre,
+                        precio: p.precioLabel,
+                        sku: 'SKU-' + p.id.replace(/-/g, '').slice(0, 10).toUpperCase(),
+                        img: p.img,
+                        cat: CAT_LABEL[k] || k.toUpperCase(),
+                        id: p.id,
+                    });
+                });
+            });
+        } catch (e) {
+            console.warn('[catalogo.js] Error cargando productos de la API:', e);
+        }
     }
 
     function mercaRefreshCartUI() {
@@ -717,9 +780,10 @@
         panel = document.getElementById('search-panel');
         input = document.getElementById('main-search');
 
-        // Sincronizar sesión y carrito
+        // Sincronizar sesión, carrito y catálogo dinámico de PostgreSQL
         await mercaCheckSession();
         await mercaFetchCart();
+        await loadDynamicCatalog();
 
         if (currentViewMode === 'seccion') {
             var seccionList = gatherBySeccion(currentSeccionKey);

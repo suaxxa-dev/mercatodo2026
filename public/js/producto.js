@@ -45,7 +45,8 @@
     }
 
     function mercaMoney(n) {
-        var copValue = Math.round(Number(n) * 4000);
+        var num = Number(n) || 0;
+        var copValue = num >= 1000 ? Math.round(num) : Math.round(num * 4000);
         return '$ ' + copValue.toLocaleString('es-CO');
     }
 
@@ -200,10 +201,57 @@
         return parts.join(' · ');
     }
 
-    function renderProduct() {
+    async function renderProduct() {
         var id = getProductIdFromUrl();
         currentProductId = id;
-        currentData = PRODUCTOS_FICHA[id];
+        currentData = (typeof PRODUCTOS_FICHA !== 'undefined' && PRODUCTOS_FICHA[id]) ? PRODUCTOS_FICHA[id] : null;
+
+        if (!currentData && id) {
+            try {
+                var res = await fetch('/api/products/' + encodeURIComponent(id));
+                if (res.ok) {
+                    var p = await res.json();
+                    if (p && p.id) {
+                        var precioNum = parseFloat(p.precio) || 0;
+                        var precioLabel = p.precio_label || p.precioLabel || mercaMoney(precioNum);
+                        var catName = (p.categoria || 'tecnologia');
+                        catName = catName.charAt(0).toUpperCase() + catName.slice(1);
+                        currentData = {
+                            titulo: p.nombre,
+                            precioLabel: precioLabel,
+                            precioNum: precioNum,
+                            precioAnterior: 0,
+                            rating: '5.0',
+                            opiniones: '1',
+                            descripcion: p.descripcion || 'Producto premium disponible en MERCA TO-DO con garantía oficial.',
+                            breadcrumb: [catName, p.nombre],
+                            imagenes: [p.img || 'img/cat-tecnologia-dell-laptop.jpg'],
+                            miniaturas: [p.img || 'img/cat-tecnologia-dell-laptop.jpg'],
+                            colores: [],
+                            tallas: [],
+                            vendedor: { nombre: p.marca || 'MERCA TO-DO Oficial', estrella: true, badge: 'Tienda Oficial' },
+                            caracteristicas: [
+                                'Categoría: ' + catName,
+                                'Stock disponible: ' + (p.stock !== undefined ? p.stock : 50) + ' unidades',
+                                'Garantía directa de 12 meses',
+                                'Envío nacional seguro a toda Colombia'
+                            ],
+                            especificaciones: [
+                                { k: 'Marca', v: p.marca || 'MERCA TO-DO' },
+                                { k: 'Modelo / SKU', v: p.sku || p.id },
+                                { k: 'Categoría', v: catName },
+                                { k: 'Condición', v: 'Nuevo' },
+                                { k: 'Disponibilidad', v: (p.stock !== undefined ? p.stock : 50) + ' unidades' }
+                            ],
+                            opinionesHtml: '<p>Este producto cuenta con la máxima calificación y garantía de satisfacción.</p>',
+                            relacionados: [],
+                            sku: p.sku || ('SKU-' + p.id.toUpperCase().slice(0, 8)),
+                            stock: p.stock !== undefined ? p.stock : 50
+                        };
+                    }
+                }
+            } catch (err) {}
+        }
 
         if (!currentData) {
             document.querySelector('.producto-wrap').innerHTML =
@@ -214,16 +262,16 @@
         var d = currentData;
         document.title = 'MERCA TO-DO | ' + mercaEsc(d.titulo);
 
-        var bc = d.breadcrumb
-            .map(function (seg, i) {
-                return i < d.breadcrumb.length - 1 ? '<span>' + mercaEsc(seg) + '</span>' : '<strong>' + mercaEsc(seg) + '</strong>';
+        var bc = (d.breadcrumb || ['General', d.titulo])
+            .map(function (seg, i, arr) {
+                return i < arr.length - 1 ? '<span>' + mercaEsc(seg) + '</span>' : '<strong>' + mercaEsc(seg) + '</strong>';
             })
             .join(' <span>/</span> ');
         document.getElementById('p-breadcrumb').innerHTML =
             '<a href="Mainpage.html">Inicio</a> <span>/</span> ' +
             bc;
 
-        var catLink = CAT_FROM_CRUMB[d.breadcrumb[0]] || 'tecnologia';
+        var catLink = CAT_FROM_CRUMB[d.breadcrumb ? d.breadcrumb[0] : ''] || 'tecnologia';
         var backCat = document.querySelector('.producto-back a[href*="catalogo"]');
         if (backCat) backCat.setAttribute('href', 'catalogo.html?cat=' + catLink);
 
@@ -231,7 +279,8 @@
         selectedColorIdx = 0;
         selectedTalla = d.tallas && d.tallas.length ? d.tallas[0] : '';
 
-        var mains = d.imagenes
+        var imgs = (d.imagenes && d.imagenes.length) ? d.imagenes : ['img/cat-tecnologia-dell-laptop.jpg'];
+        var mains = imgs
             .map(function (src, idx) {
                 return (
                     '<div class="producto-main-img" data-main-idx="' +
@@ -246,7 +295,8 @@
             .join('');
         document.getElementById('p-main-images').innerHTML = mains;
 
-        var thumbs = d.miniaturas
+        var thumbsList = (d.miniaturas && d.miniaturas.length) ? d.miniaturas : imgs;
+        var thumbs = thumbsList
             .map(function (src, idx) {
                 return (
                     '<button type="button" class="producto-thumb' +
@@ -264,12 +314,12 @@
         document.getElementById('p-titulo').textContent = d.titulo;
         document.getElementById('p-rating').innerHTML =
             '<span class="producto-stars">' +
-            starsHtmlRating(d.rating) +
+            starsHtmlRating(d.rating || 5) +
             '</span>' +
             '<span class="producto-rating-meta">' +
-            d.rating +
+            (d.rating || '5.0') +
             ' (' +
-            d.opiniones +
+            (d.opiniones || '1') +
             ' opiniones)</span>';
 
         var priceHtml =
@@ -286,7 +336,7 @@
                 ')</span>';
         }
         document.getElementById('p-price-block').innerHTML = priceHtml;
-        document.getElementById('p-desc').textContent = d.descripcion;
+        document.getElementById('p-desc').textContent = d.descripcion || '';
 
         var colWrap = document.getElementById('p-colores-wrap');
         if (d.colores && d.colores.length) {
@@ -334,61 +384,79 @@
             tallaWrap.classList.add('producto-options--hidden');
         }
 
-        var v = d.vendedor;
-        document.getElementById('p-vendedor').innerHTML =
-            '<div class="producto-vendedor-top">' +
-            '<span>Vendido por: <span class="producto-vendedor-nombre">' +
-            mercaEsc(v.nombre) +
-            '</span></span>' +
-            (v.estrella ? '<span class="badge-estrella">vendedor estrella</span>' : '') +
-            (v.badge ? '<span class="badge-ventas">' + mercaEsc(v.badge) + '</span>' : '') +
-            '</div>' +
-            '<div class="producto-vendedor-stars">★★★★★</div>';
+        var v = d.vendedor || { nombre: 'MERCA TO-DO Oficial', estrella: true, badge: 'Tienda Oficial' };
+        var elVend = document.getElementById('p-vendedor');
+        if (elVend) {
+            elVend.innerHTML =
+                '<div class="producto-vendedor-top">' +
+                '<span>Vendido por: <span class="producto-vendedor-nombre">' +
+                mercaEsc(v.nombre) +
+                '</span></span>' +
+                (v.estrella ? '<span class="badge-estrella">vendedor estrella</span>' : '') +
+                (v.badge ? '<span class="badge-ventas">' + mercaEsc(v.badge) + '</span>' : '') +
+                '</div>' +
+                '<div class="producto-vendedor-stars">★★★★★</div>';
+        }
 
-        document.getElementById('p-caracteristicas').innerHTML = d.caracteristicas
-            .map(function (c) {
-                return '<li>' + mercaEsc(c) + '</li>';
-            })
-            .join('');
+        var elCaract = document.getElementById('p-caracteristicas');
+        if (elCaract) {
+            var caracts = Array.isArray(d.caracteristicas) ? d.caracteristicas : [];
+            elCaract.innerHTML = caracts
+                .map(function (c) {
+                    return '<li>' + mercaEsc(c) + '</li>';
+                })
+                .join('');
+        }
 
-        document.getElementById('p-especificaciones').innerHTML =
-            '<tbody>' +
-            d.especificaciones
-                .map(function (row) {
+        var elEspec = document.getElementById('p-especificaciones');
+        if (elEspec) {
+            var specs = Array.isArray(d.especificaciones) ? d.especificaciones : [];
+            elEspec.innerHTML =
+                '<tbody>' +
+                specs
+                    .map(function (row) {
+                        return (
+                            '<tr><td>' +
+                            mercaEsc(row.k) +
+                            '</td><td>' +
+                            mercaEsc(row.v) +
+                            '</td></tr>'
+                        );
+                    })
+                    .join('') +
+                '</tbody>';
+        }
+
+        var elOpin = document.getElementById('p-opiniones');
+        if (elOpin) {
+            elOpin.innerHTML = d.opinionesHtml || '<p>Sin opiniones aún.</p>';
+        }
+
+        var elRel = document.getElementById('p-relacionados');
+        if (elRel) {
+            var rels = Array.isArray(d.relacionados) ? d.relacionados : [];
+            elRel.innerHTML = rels
+                .filter(function (rid) {
+                    return typeof PRODUCTOS_FICHA !== 'undefined' && PRODUCTOS_FICHA[rid];
+                })
+                .map(function (rid) {
+                    var r = PRODUCTOS_FICHA[rid];
                     return (
-                        '<tr><td>' +
-                        mercaEsc(row.k) +
-                        '</td><td>' +
-                        mercaEsc(row.v) +
-                        '</td></tr>'
+                        '<a class="producto-rel-card" href="producto.html?id=' +
+                        encodeURIComponent(rid) +
+                        '">' +
+                        '<button type="button" class="rel-wish" onclick="event.preventDefault();event.stopPropagation();" aria-label="Favoritos"><i class="fa-regular fa-heart"></i></button>' +
+                        '<div class="producto-rel-img"><img src="' +
+                        mercaEsc(r.imagenes[0]) +
+                        '" alt=""></div>' +
+                        '<div class="producto-rel-info">' +
+                        mercaEsc(r.titulo.substring(0, 40)) +
+                        (r.titulo.length > 40 ? '…' : '') +
+                        '</div></a>'
                     );
                 })
-                .join('') +
-            '</tbody>';
-
-        document.getElementById('p-opiniones').innerHTML = d.opinionesHtml || '<p>Sin opiniones aún.</p>';
-
-        document.getElementById('p-relacionados').innerHTML = d.relacionados
-            .filter(function (rid) {
-                return PRODUCTOS_FICHA[rid];
-            })
-            .map(function (rid) {
-                var r = PRODUCTOS_FICHA[rid];
-                return (
-                    '<a class="producto-rel-card" href="producto.html?id=' +
-                    encodeURIComponent(rid) +
-                    '">' +
-                    '<button type="button" class="rel-wish" onclick="event.preventDefault();event.stopPropagation();" aria-label="Favoritos"><i class="fa-regular fa-heart"></i></button>' +
-                    '<div class="producto-rel-img"><img src="' +
-                    mercaEsc(r.imagenes[0]) +
-                    '" alt=""></div>' +
-                    '<div class="producto-rel-info">' +
-                    mercaEsc(r.titulo.substring(0, 40)) +
-                    (r.titulo.length > 40 ? '…' : '') +
-                    '</div></a>'
-                );
-            })
-            .join('');
+                .join('');
+        }
 
         bindProductInteractions();
     }
@@ -442,12 +510,13 @@
                 selectedColorIdx +
                 '::t' +
                 String(selectedTalla || '').replace(/:/g, '');
+            var imgUrl = (currentData.imagenes && currentData.imagenes.length) ? currentData.imagenes[0] : (currentData.img || 'img/cat-tecnologia-dell-laptop.jpg');
             var res = await mercaAddToCart({
                 id: lineId,
                 nombre: nombre,
                 precioNum: currentData.precioNum,
                 precioLabel: currentData.precioLabel,
-                img: currentData.imagenes[0],
+                img: imgUrl,
             });
             if (res.ok) {
                 mercaRefreshCartUI();
@@ -455,6 +524,10 @@
                 window.setTimeout(function () {
                     addBtn.textContent = 'AÑADIR AL CARRITO';
                 }, 1200);
+            } else if (res.reason === 'auth') {
+                window.alert('Inicia sesión para añadir productos al carrito.');
+            } else {
+                window.alert('No se pudo añadir al carrito. Intenta de nuevo.');
             }
         };
 
@@ -585,7 +658,7 @@
         await mercaCheckSession();
         await mercaFetchCart();
         initNav();
-        renderProduct();
+        await renderProduct();
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -132,7 +132,7 @@ function mercaSaveCart() {
 
 /**
  * Agregar al carrito (async)
- * @returns {Promise<{ ok: boolean, reason?: string }>}
+ * @returns {Promise<{ ok: boolean, error?: string, reason?: string }>}
  */
 async function mercaAddToCart(line) {
     if (!mercaGetSession()) return { ok: false, reason: 'auth' };
@@ -144,9 +144,12 @@ async function mercaAddToCart(line) {
         });
         const data = await res.json();
         if (data.cart) _saveCartCache(data.cart);
-        return { ok: res.ok };
+        if (!res.ok) {
+            return { ok: false, error: data.error || 'Stock no disponible' };
+        }
+        return { ok: true };
     } catch {
-        return { ok: false, reason: 'network' };
+        return { ok: false, reason: 'network', error: 'Error de red' };
     }
 }
 
@@ -155,7 +158,7 @@ async function mercaSetCartLineQty(id, qty) {
     const n = parseInt(String(qty), 10);
     if (!n || n < 1) {
         await mercaRemoveCartLine(id);
-        return;
+        return { ok: true };
     }
     try {
         const res = await fetch('/api/cart/' + encodeURIComponent(id), {
@@ -165,7 +168,14 @@ async function mercaSetCartLineQty(id, qty) {
         });
         const data = await res.json();
         if (data.cart) _saveCartCache(data.cart);
-    } catch {}
+        if (!res.ok) {
+            if (data.error) window.alert(data.error);
+            return { ok: false, error: data.error };
+        }
+        return { ok: true };
+    } catch {
+        return { ok: false, error: 'Error de red' };
+    }
 }
 
 /** Eliminar línea del carrito */

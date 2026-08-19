@@ -13,7 +13,7 @@
 
     var SEARCH_DB = [];
     var couponApplied = false;
-    var TAX_FIXED = 20;
+    var TAX_FIXED = 0;
 
     function mercaEsc(s) {
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -24,7 +24,9 @@
     }
 
     function mercaMoney(n) {
-        return '$' + (Math.round(Number(n) * 100) / 100).toFixed(2);
+        var num = Number(n) || 0;
+        var copValue = num >= 1000 ? Math.round(num) : Math.round(num * 4000);
+        return '$ ' + copValue.toLocaleString('es-CO');
     }
 
     function buildSearchDb() {
@@ -198,11 +200,13 @@
         var btnPay = document.getElementById('btn-pay');
 
         if (elSub) elSub.textContent = mercaMoney(sub);
-        if (couponApplied && sub > 0) {
-            elDiscRow.hidden = false;
-            elDisc.textContent = '−' + mercaMoney(sub - dSub);
-        } else if (elDiscRow) {
-            elDiscRow.hidden = true;
+        if (elDiscRow) {
+            if (couponApplied && sub > 0) {
+                elDiscRow.style.display = 'flex';
+                elDisc.textContent = '−' + mercaMoney(sub - dSub);
+            } else {
+                elDiscRow.style.display = 'none';
+            }
         }
         if (elTax) elTax.textContent = mercaMoney(tax);
         if (elTotal) elTotal.textContent = mercaMoney(total);
@@ -290,6 +294,7 @@
             var rm = e.target.closest('[data-chk-remove]');
             if (rm) {
                 await mercaRemoveCartLine(rm.getAttribute('data-chk-remove'));
+                refreshCheckoutPage();
                 mercaRefreshCartUI();
                 return;
             }
@@ -306,6 +311,7 @@
             if (minus) q -= 1;
             else q += 1;
             await mercaSetCartLineQty(cid, q);
+            refreshCheckoutPage();
             mercaRefreshCartUI();
         });
     }

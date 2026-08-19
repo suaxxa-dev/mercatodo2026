@@ -14,7 +14,6 @@
         input;
 
     var SEARCH_DB = [];
-
     var DEMO_ORDERS = [];
 
     function mercaEsc(s) {
@@ -22,7 +21,9 @@
     }
 
     function mercaMoney(n) {
-        return '$' + (Math.round(Number(n) * 100) / 100).toFixed(2);
+        var num = Number(n) || 0;
+        var copValue = num >= 1000 ? Math.round(num) : Math.round(num * 4000);
+        return '$ ' + copValue.toLocaleString('es-CO');
     }
 
     function buildSearchDb() {
@@ -53,15 +54,15 @@
         if (!body) return;
         if (!session) {
             body.innerHTML =
-                '<p class="cart-msg">Inicia sesiÃ³n para aÃ±adir productos y ver tu carrito por cuenta.</p>' +
-                '<a href="Login.html" class="cart-login-link">Iniciar sesiÃ³n</a>';
+                '<p class="cart-msg">Inicia sesión para añadir productos y ver tu carrito por cuenta.</p>' +
+                '<a href="Login.html" class="cart-login-link">Iniciar sesión</a>';
             return;
         }
         var cart = mercaGetCart();
         if (cart.length === 0) {
             body.innerHTML =
-                '<p class="cart-empty">Tu carrito estÃ¡ vacÃ­o.</p>' +
-                '<p class="cart-hint">AÃ±ade productos desde el catÃ¡logo.</p>';
+                '<p class="cart-empty">Tu carrito está vacío.</p>' +
+                '<p class="cart-hint">Añade productos desde el catálogo.</p>';
             return;
         }
         var lines = cart
@@ -85,13 +86,13 @@
                     '<div class="cart-qty">' +
                     '<button type="button" class="cart-qty-btn" data-cart-minus="' +
                     id +
-                    '" aria-label="Quitar una unidad">âˆ’</button>' +
+                    '" aria-label="Quitar una unidad">−</button>' +
                     '<span class="cart-qty-num">' +
                     q +
                     '</span>' +
                     '<button type="button" class="cart-qty-btn" data-cart-plus="' +
                     id +
-                    '" aria-label="AÃ±adir una unidad">+</button>' +
+                    '" aria-label="Añadir una unidad">+</button>' +
                     '</div>' +
                     '<button type="button" class="cart-remove" data-cart-remove="' +
                     id +
@@ -122,8 +123,8 @@
         if (!session) {
             body.innerHTML =
                 '<p class="profile-dropdown-hint">Accede para comprar y ver tus pedidos</p>' +
-                '<a href="Login.html" class="profile-dropdown-login" role="menuitem">Iniciar sesiÃ³n</a>' +
-                '<a href="ayuda.html" class="profile-dropdown-help profile-dropdown-help--guest" role="menuitem">Centro de informaciÃ³n y ayuda</a>';
+                '<a href="Login.html" class="profile-dropdown-login" role="menuitem">Iniciar sesión</a>' +
+                '<a href="ayuda.html" class="profile-dropdown-help profile-dropdown-help--guest" role="menuitem">Centro de información y ayuda</a>';
             mercaRefreshCartUI();
             return;
         }
@@ -242,7 +243,7 @@
             }
         };
 
-        // â”€â”€ Motor de bÃºsqueda Python (search-ui.js) â”€â”€
+        // Motor de búsqueda nativo (search-ui.js)
         MercaSearch.init({
             inputId:       'main-search',
             containerId:   'results-container',
@@ -315,15 +316,19 @@
     function renderUltimoPedido() {
         var el = document.getElementById('cuenta-ultimo-pedido');
         if (!el) return;
+        if (!DEMO_ORDERS || DEMO_ORDERS.length === 0) {
+            el.innerHTML = '<p style="color:#64748b; padding:15px;">No tienes pedidos recientes.</p>';
+            return;
+        }
         var o = DEMO_ORDERS[0];
         el.innerHTML =
             '<div class="cuenta-order-card-head">' +
             '<div>' +
-            '<h3><i class="fa-solid fa-box" aria-hidden="true"></i> Ãšltimo pedido</h3>' +
+            '<h3><i class="fa-solid fa-box" aria-hidden="true"></i> Último pedido</h3>' +
             '<p class="cuenta-order-meta">ID del pedido: <strong>#' +
             mercaEsc(o.codigo) +
             '</strong><br>Fecha: <strong>' +
-            mercaEsc(o.fechaLabel) +
+            mercaEsc(o.fechaLabel || o.fecha || '') +
             '</strong><br>Total: <strong>' +
             mercaMoney(o.total) +
             '</strong></p></div>' +
@@ -348,13 +353,18 @@
     }
 
     function filterOrders() {
-        var est = document.getElementById('filtro-estado').value;
-        var fecha = document.getElementById('filtro-fecha').value;
-        var cod = (document.getElementById('filtro-codigo').value || '').trim().toUpperCase();
+        var estEl = document.getElementById('filtro-estado');
+        var fechaEl = document.getElementById('filtro-fecha');
+        var codEl = document.getElementById('filtro-codigo');
+
+        var est = estEl ? estEl.value : 'todos';
+        var fecha = fechaEl ? fechaEl.value : 'todos';
+        var cod = codEl ? (codEl.value || '').trim().toUpperCase() : '';
+
         return DEMO_ORDERS.filter(function (o, idx) {
             if (est !== 'todos' && o.estado !== est) return false;
             if (fecha === 'mes' && idx > 0) return false;
-            if (cod && o.codigo.toUpperCase().indexOf(cod) === -1) return false;
+            if (cod && o.codigo && o.codigo.toUpperCase().indexOf(cod) === -1) return false;
             return true;
         });
     }
@@ -364,17 +374,17 @@
         if (!list) return;
         var rows = filterOrders();
         if (rows.length === 0) {
-            list.innerHTML = '<p style="color:#64748b;">No hay pedidos que coincidan con los filtros.</p>';
+            list.innerHTML = '<p style="color:#64748b; padding:20px;">No hay pedidos que coincidan con los filtros.</p>';
             return;
         }
         list.innerHTML = rows
             .map(function (o, i) {
-                var itemsHtml = o.items
+                var itemsHtml = (o.items || [])
                     .map(function (it) {
                         return (
                             '<div class="cuenta-pedido-item">' +
                             '<img src="' +
-                            mercaEsc(it.img) +
+                            mercaEsc(it.img || 'img/cat-tecnologia-dell-laptop.jpg') +
                             '" alt="">' +
                             '<span>' +
                             mercaEsc(it.nombre) +
@@ -391,8 +401,8 @@
                     mercaEsc(o.codigo) +
                     '</h3>' +
                     '<p>Fecha: <strong>' +
-                    mercaEsc(o.fechaLabel) +
-                    '</strong> Â· Total: <strong>' +
+                    mercaEsc(o.fechaLabel || o.fecha || '') +
+                    '</strong> · Total: <strong>' +
                     mercaMoney(o.total) +
                     '</strong></p></div>' +
                     '<span class="' +
@@ -422,6 +432,11 @@
         document.querySelectorAll('.cuenta-panel').forEach(function (p) {
             p.classList.toggle('is-visible', p.id === 'panel-' + panelId);
         });
+
+        if (panelId === 'direcciones') loadDirecciones();
+        if (panelId === 'pedidos') renderPedidos();
+        if (panelId === 'datos') loadProfileForm();
+
         if (pushHash !== false) {
             if (history.replaceState) history.replaceState(null, '', '#' + panelId);
             else window.location.hash = panelId;
@@ -431,19 +446,31 @@
     function loadProfileForm() {
         var s = mercaGetSession();
         if (!s) return;
-        document.getElementById('dato-nombre').value = s.nombre || '';
-        document.getElementById('dato-email').value = s.email || '';
+        var nomEl = document.getElementById('dato-nombre');
+        var emailEl = document.getElementById('dato-email');
+        if (nomEl) nomEl.value = s.nombre || '';
+        if (emailEl) emailEl.value = s.email || '';
+
         // Cargar datos extra desde la API
-        fetch('/api/profile').then(function(res) { return res.json(); }).then(function(profile) {
-            if (profile && profile.telefono) document.getElementById('dato-tel').value = profile.telefono;
-            if (profile && profile.nacimiento) document.getElementById('dato-nac').value = profile.nacimiento;
-        }).catch(function() {});
+        fetch('/api/profile').then(function (res) { return res.json(); }).then(function (profile) {
+            if (profile) {
+                var telEl = document.getElementById('dato-tel');
+                var nacEl = document.getElementById('dato-nac');
+                if (telEl && profile.telefono) telEl.value = profile.telefono;
+                if (nacEl && profile.nacimiento) nacEl.value = profile.nacimiento;
+            }
+        }).catch(function () {});
     }
 
     async function saveProfileForm() {
-        var tel = document.getElementById('dato-tel').value.trim();
-        var nac = document.getElementById('dato-nac').value;
-        var nom = document.getElementById('dato-nombre').value.trim();
+        var telEl = document.getElementById('dato-tel');
+        var nacEl = document.getElementById('dato-nac');
+        var nomEl = document.getElementById('dato-nombre');
+
+        var tel = telEl ? telEl.value.trim() : '';
+        var nac = nacEl ? nacEl.value : '';
+        var nom = nomEl ? nomEl.value.trim() : '';
+
         try {
             var res = await fetch('/api/profile', {
                 method: 'PUT',
@@ -452,18 +479,23 @@
             });
             var data = await res.json();
             if (data.ok && data.profile && nom) {
-                mercaSetSession({ nombre: nom, email: data.profile.email });
+                mercaSetSession({ nombre: nom, email: data.profile.email, rol: data.profile.rol });
             }
         } catch {}
+
         var now = new Date();
         var d = String(now.getDate()).padStart(2, '0');
         var m = String(now.getMonth() + 1).padStart(2, '0');
-        document.getElementById('dato-ultima-act').textContent = d + '/' + m + '/' + now.getFullYear();
+        var actEl = document.getElementById('dato-ultima-act');
+        if (actEl) actEl.textContent = d + '/' + m + '/' + now.getFullYear();
+
         var ok = document.getElementById('dato-save-ok');
-        ok.classList.add('is-visible');
-        window.setTimeout(function () {
-            ok.classList.remove('is-visible');
-        }, 4000);
+        if (ok) {
+            ok.classList.add('is-visible');
+            window.setTimeout(function () {
+                ok.classList.remove('is-visible');
+            }, 4000);
+        }
         mercaRenderProfileMenu();
     }
 
@@ -490,110 +522,249 @@
             });
         }
 
-        document.getElementById('filtro-estado').addEventListener('change', renderPedidos);
-        document.getElementById('filtro-fecha').addEventListener('change', renderPedidos);
-        document.getElementById('filtro-codigo').addEventListener('input', renderPedidos);
+        var fe = document.getElementById('filtro-estado');
+        var ff = document.getElementById('filtro-fecha');
+        var fc = document.getElementById('filtro-codigo');
+        if (fe) fe.addEventListener('change', renderPedidos);
+        if (ff) ff.addEventListener('change', renderPedidos);
+        if (fc) fc.addEventListener('input', renderPedidos);
 
-        document.getElementById('cuenta-logout-side').addEventListener('click', function () {
-            mercaClearSession();
-            window.location.href = 'Mainpage.html';
-        });
+        var logoutSide = document.getElementById('cuenta-logout-side');
+        if (logoutSide) {
+            logoutSide.addEventListener('click', function () {
+                mercaClearSession();
+                window.location.href = 'Mainpage.html';
+            });
+        }
 
-        document.getElementById('form-datos-personales').addEventListener('submit', function (e) {
-            e.preventDefault();
-            saveProfileForm();
-        });
+        var formDatos = document.getElementById('form-datos-personales');
+        if (formDatos) {
+            formDatos.addEventListener('submit', function (e) {
+                e.preventDefault();
+                saveProfileForm();
+            });
+        }
 
-        // â”€â”€ ContraseÃ±a real â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    var passForm = document.getElementById('form-password');
-    if (passForm) {
-        // AÃ±adir mensaje de respuesta al formulario
-        var passMsg = document.createElement('p');
-        passMsg.id = 'pass-msg';
-        passMsg.className = 'cuenta-save-ok';
-        passMsg.setAttribute('role', 'status');
-        passMsg.style.display = 'none';
-        passForm.appendChild(passMsg);
-
-        passForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            var actual = document.getElementById('pass-actual').value;
-            var nueva = document.getElementById('pass-nueva').value;
-            var nueva2 = document.getElementById('pass-nueva2').value;
-            passMsg.style.display = 'none';
-            passMsg.className = 'cuenta-save-ok';
-            passMsg.style.color = '';
-            passMsg.style.background = '';
-            passMsg.style.borderColor = '';
-
-            if (!actual || !nueva || !nueva2) {
-                passMsg.textContent = 'Completa todos los campos de contraseÃ±a.';
-                passMsg.style.display = 'block';
-                passMsg.style.color = '#e53e3e';
-                passMsg.style.background = '#fff5f5';
-                passMsg.style.borderColor = '#e53e3e';
-                return;
+        // Formulario Contraseña
+        var passForm = document.getElementById('form-password');
+        if (passForm) {
+            var passMsg = document.getElementById('pass-msg');
+            if (!passMsg) {
+                passMsg = document.createElement('p');
+                passMsg.id = 'pass-msg';
+                passMsg.className = 'cuenta-save-ok';
+                passMsg.setAttribute('role', 'status');
+                passMsg.style.display = 'none';
+                passForm.appendChild(passMsg);
             }
-            if (nueva !== nueva2) {
-                passMsg.textContent = 'Las contraseÃ±as nuevas no coinciden.';
-                passMsg.style.display = 'block';
-                passMsg.style.color = '#e53e3e';
-                passMsg.style.background = '#fff5f5';
-                passMsg.style.borderColor = '#e53e3e';
-                return;
-            }
-            var btn = passForm.querySelector('[type="submit"]');
-            btn.disabled = true;
-            btn.textContent = 'Guardandoâ€¦';
-            try {
-                var res = await fetch('/api/auth/password', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ currentPassword: actual, newPassword: nueva }),
-                });
-                var data = await res.json();
-                if (data.ok) {
-                    passMsg.textContent = 'âœ“ ' + data.message;
-                    passMsg.classList.add('is-visible');
-                    passMsg.style.display = 'block';
-                    passForm.reset();
-                    window.setTimeout(function () {
-                        passMsg.classList.remove('is-visible');
-                        passMsg.style.display = 'none';
-                    }, 4000);
-                } else {
-                    passMsg.textContent = data.error || 'Error al cambiar la contraseÃ±a.';
+
+            passForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                var actual = document.getElementById('pass-actual').value;
+                var nueva = document.getElementById('pass-nueva').value;
+                var nueva2 = document.getElementById('pass-nueva2').value;
+                passMsg.style.display = 'none';
+                passMsg.className = 'cuenta-save-ok';
+                passMsg.style.color = '';
+                passMsg.style.background = '';
+                passMsg.style.borderColor = '';
+
+                if (!actual || !nueva || !nueva2) {
+                    passMsg.textContent = 'Completa todos los campos de contraseña.';
                     passMsg.style.display = 'block';
                     passMsg.style.color = '#e53e3e';
                     passMsg.style.background = '#fff5f5';
                     passMsg.style.borderColor = '#e53e3e';
+                    return;
                 }
-            } catch {
-                passMsg.textContent = 'Error de red. Intenta de nuevo.';
-                passMsg.style.display = 'block';
-                passMsg.style.color = '#e53e3e';
-            }
-            btn.disabled = false;
-            btn.textContent = 'Actualizar contraseÃ±a';
-        });
+                if (nueva !== nueva2) {
+                    passMsg.textContent = 'Las contraseñas nuevas no coinciden.';
+                    passMsg.style.display = 'block';
+                    passMsg.style.color = '#e53e3e';
+                    passMsg.style.background = '#fff5f5';
+                    passMsg.style.borderColor = '#e53e3e';
+                    return;
+                }
+                var btn = passForm.querySelector('[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Guardando…';
+                }
+                try {
+                    var res = await fetch('/api/auth/password', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ currentPassword: actual, newPassword: nueva }),
+                    });
+                    var data = await res.json();
+                    if (data.ok) {
+                        passMsg.textContent = '✓ ' + (data.message || 'Contraseña actualizada.');
+                        passMsg.classList.add('is-visible');
+                        passMsg.style.display = 'block';
+                        passForm.reset();
+                        window.setTimeout(function () {
+                            passMsg.classList.remove('is-visible');
+                            passMsg.style.display = 'none';
+                        }, 4000);
+                    } else {
+                        passMsg.textContent = data.error || 'Error al cambiar la contraseña.';
+                        passMsg.style.display = 'block';
+                        passMsg.style.color = '#e53e3e';
+                        passMsg.style.background = '#fff5f5';
+                        passMsg.style.borderColor = '#e53e3e';
+                    }
+                } catch {
+                    passMsg.textContent = 'Error de red. Intenta de nuevo.';
+                    passMsg.style.display = 'block';
+                    passMsg.style.color = '#e53e3e';
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Actualizar contraseña';
+                }
+            });
+        }
+
+        // Direcciones
+        var dirModal = document.getElementById('dir-modal');
+        var dirList = document.getElementById('dir-list');
+        var dirForm = document.getElementById('form-direccion');
+        var dirErr = document.getElementById('dir-form-error');
+
+        function openDirModal(dir) {
+            if (!dirModal) return;
+            var title = document.getElementById('dir-modal-title');
+            if (title) title.textContent = dir ? 'Editar dirección' : 'Nueva dirección';
+            document.getElementById('dir-edit-id').value = dir ? dir.id : '';
+            document.getElementById('dir-alias').value = dir ? (dir.alias || '') : '';
+            document.getElementById('dir-nombre').value = dir ? (dir.nombre || '') : '';
+            document.getElementById('dir-calle').value = dir ? (dir.calle || '') : '';
+            document.getElementById('dir-ciudad').value = dir ? (dir.ciudad || '') : '';
+            document.getElementById('dir-estado').value = dir ? (dir.estado || '') : '';
+            document.getElementById('dir-cp').value = dir ? (dir.codigoPostal || '') : '';
+            document.getElementById('dir-predet').checked = dir ? !!dir.predeterminada : false;
+            if (dirErr) { dirErr.textContent = ''; dirErr.style.display = 'none'; }
+            dirModal.hidden = false;
+            document.getElementById('dir-nombre').focus();
+        }
+
+        function closeDirModal() {
+            if (dirModal) dirModal.hidden = true;
+            if (dirForm) dirForm.reset();
+        }
+
+        if (document.getElementById('btn-add-dir')) {
+            document.getElementById('btn-add-dir').addEventListener('click', function () { openDirModal(null); });
+        }
+        if (document.getElementById('dir-modal-close')) {
+            document.getElementById('dir-modal-close').addEventListener('click', closeDirModal);
+        }
+        if (document.getElementById('dir-modal-cancel')) {
+            document.getElementById('dir-modal-cancel').addEventListener('click', closeDirModal);
+        }
+        if (dirModal) {
+            dirModal.addEventListener('click', function (e) {
+                if (e.target === dirModal) closeDirModal();
+            });
+        }
+
+        // Delegación de clicks en tarjetas de dirección
+        if (dirList) {
+            dirList.addEventListener('click', async function (e) {
+                var editBtn = e.target.closest('.dir-btn-edit');
+                var delBtn = e.target.closest('.dir-btn-del');
+
+                if (editBtn) {
+                    var id = parseInt(editBtn.getAttribute('data-dir-id'), 10);
+                    var resDirs = await fetch('/api/addresses');
+                    var dirs = await resDirs.json();
+                    var dir = dirs.find(function (d) { return d.id === id; });
+                    if (dir) openDirModal(dir);
+                }
+                if (delBtn) {
+                    if (!confirm('¿Eliminar esta dirección?')) return;
+                    var delId = delBtn.getAttribute('data-dir-id');
+                    var resD = await fetch('/api/addresses/' + delId, { method: 'DELETE' });
+                    var dataD = await resD.json();
+                    if (dataD.ok) renderDirecciones(dataD.addresses);
+                    else alert(dataD.error || 'No se pudo eliminar la dirección.');
+                }
+            });
+        }
+
+        if (dirForm) {
+            dirForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                if (dirErr) { dirErr.textContent = ''; dirErr.style.display = 'none'; }
+                var editId = document.getElementById('dir-edit-id').value;
+                var body = {
+                    alias:          document.getElementById('dir-alias').value.trim(),
+                    nombre:         document.getElementById('dir-nombre').value.trim(),
+                    calle:          document.getElementById('dir-calle').value.trim(),
+                    ciudad:         document.getElementById('dir-ciudad').value.trim(),
+                    estado:         document.getElementById('dir-estado').value.trim(),
+                    codigoPostal:   document.getElementById('dir-cp').value.trim(),
+                    predeterminada: document.getElementById('dir-predet').checked,
+                };
+                var submitBtn = document.getElementById('dir-modal-submit');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Guardando…';
+                }
+                try {
+                    var url = editId ? '/api/addresses/' + editId : '/api/addresses';
+                    var method = editId ? 'PUT' : 'POST';
+                    var res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    });
+                    var data = await res.json();
+                    if (data.ok) {
+                        renderDirecciones(data.addresses);
+                        closeDirModal();
+                    } else {
+                        if (dirErr) {
+                            dirErr.textContent = data.error || 'Error al guardar.';
+                            dirErr.style.display = 'block';
+                        }
+                    }
+                } catch {
+                    if (dirErr) { dirErr.textContent = 'Error de red.'; dirErr.style.display = 'block'; }
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Guardar dirección';
+                }
+            });
+        }
+
+        var plist = document.getElementById('pedidos-list');
+        if (plist) {
+            plist.addEventListener('click', function (e) {
+                var t = e.target.closest('[data-demo]');
+                if (!t) return;
+                var k = t.getAttribute('data-demo');
+                window.alert(
+                    k === 'rastreo'
+                        ? 'Demo: seguimiento del envío con el transportista.'
+                        : 'Demo: descarga o vista de factura en PDF.'
+                );
+            });
+        }
     }
 
-    // â”€â”€ Direcciones reales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    var dirModal = document.getElementById('dir-modal');
-    var dirList = document.getElementById('dir-list');
-    var dirForm = document.getElementById('form-direccion');
-    var dirErr = document.getElementById('dir-form-error');
-
     function renderDirecciones(dirs) {
+        var dirList = document.getElementById('dir-list');
         if (!dirList) return;
         if (!dirs || dirs.length === 0) {
-            dirList.innerHTML = '<p style="color:#64748b;grid-column:1/-1;">AÃºn no tienes direcciones guardadas. Â¡AÃ±ade una!</p>';
+            dirList.innerHTML = '<p style="color:#64748b;grid-column:1/-1;">Aún no tienes direcciones guardadas. ¡Añade una!</p>';
             return;
         }
         dirList.innerHTML = dirs.map(function (d) {
             var badges = d.predeterminada
                 ? '<span class="cuenta-tag cuenta-tag--green">Predeterminada</span>'
-                : '<span class="cuenta-tag cuenta-tag--gray">EnvÃ­o</span>';
+                : '<span class="cuenta-tag cuenta-tag--gray">Envío</span>';
             var aliasText = d.alias ? '<strong>' + mercaEsc(d.alias) + '</strong><br>' : '';
             return (
                 '<div class="cuenta-dir-card">' +
@@ -604,8 +775,8 @@
                 (d.codigoPostal ? ', ' + mercaEsc(d.codigoPostal) : '') + '</p>' +
                 '<div class="cuenta-dir-badges">' + badges + '</div>' +
                 '<div class="cuenta-dir-actions">' +
-                '<button type="button" class="dir-btn-edit" data-dir-id="' + d.id + '" aria-label="Editar direcciÃ³n"><i class="fa-solid fa-pencil"></i></button>' +
-                '<button type="button" class="dir-btn-del" data-dir-id="' + d.id + '" aria-label="Eliminar direcciÃ³n"><i class="fa-solid fa-trash"></i></button>' +
+                '<button type="button" class="dir-btn-edit" data-dir-id="' + d.id + '" aria-label="Editar dirección"><i class="fa-solid fa-pencil"></i></button>' +
+                '<button type="button" class="dir-btn-del" data-dir-id="' + d.id + '" aria-label="Eliminar dirección"><i class="fa-solid fa-trash"></i></button>' +
                 '</div></div>'
             );
         }).join('');
@@ -619,124 +790,6 @@
         } catch { renderDirecciones([]); }
     }
 
-    function openDirModal(dir) {
-        if (!dirModal) return;
-        var title = document.getElementById('dir-modal-title');
-        title.textContent = dir ? 'Editar direcciÃ³n' : 'Nueva direcciÃ³n';
-        document.getElementById('dir-edit-id').value = dir ? dir.id : '';
-        document.getElementById('dir-alias').value = dir ? (dir.alias || '') : '';
-        document.getElementById('dir-nombre').value = dir ? (dir.nombre || '') : '';
-        document.getElementById('dir-calle').value = dir ? (dir.calle || '') : '';
-        document.getElementById('dir-ciudad').value = dir ? (dir.ciudad || '') : '';
-        document.getElementById('dir-estado').value = dir ? (dir.estado || '') : '';
-        document.getElementById('dir-cp').value = dir ? (dir.codigoPostal || '') : '';
-        document.getElementById('dir-predet').checked = dir ? !!dir.predeterminada : false;
-        if (dirErr) { dirErr.textContent = ''; dirErr.style.display = 'none'; }
-        dirModal.hidden = false;
-        document.getElementById('dir-nombre').focus();
-    }
-
-    function closeDirModal() {
-        if (dirModal) dirModal.hidden = true;
-        if (dirForm) dirForm.reset();
-    }
-
-    if (document.getElementById('btn-add-dir')) {
-        document.getElementById('btn-add-dir').addEventListener('click', function () { openDirModal(null); });
-    }
-    if (document.getElementById('dir-modal-close')) {
-        document.getElementById('dir-modal-close').addEventListener('click', closeDirModal);
-    }
-    if (document.getElementById('dir-modal-cancel')) {
-        document.getElementById('dir-modal-cancel').addEventListener('click', closeDirModal);
-    }
-    if (dirModal) {
-        dirModal.addEventListener('click', function (e) {
-            if (e.target === dirModal) closeDirModal();
-        });
-    }
-
-    // DelegaciÃ³n de clicks en tarjetas de direcciÃ³n
-    if (dirList) {
-        dirList.addEventListener('click', async function (e) {
-            var editBtn = e.target.closest('.dir-btn-edit');
-            var delBtn = e.target.closest('.dir-btn-del');
-
-            if (editBtn) {
-                var id = parseInt(editBtn.getAttribute('data-dir-id'), 10);
-                var resDirs = await fetch('/api/addresses');
-                var dirs = await resDirs.json();
-                var dir = dirs.find(function (d) { return d.id === id; });
-                if (dir) openDirModal(dir);
-            }
-            if (delBtn) {
-                if (!confirm('Â¿Eliminar esta direcciÃ³n?')) return;
-                var delId = delBtn.getAttribute('data-dir-id');
-                var resD = await fetch('/api/addresses/' + delId, { method: 'DELETE' });
-                var dataD = await resD.json();
-                if (dataD.ok) renderDirecciones(dataD.addresses);
-                else alert(dataD.error || 'No se pudo eliminar la direcciÃ³n.');
-            }
-        });
-    }
-
-    if (dirForm) {
-        dirForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            if (dirErr) { dirErr.textContent = ''; dirErr.style.display = 'none'; }
-            var editId = document.getElementById('dir-edit-id').value;
-            var body = {
-                alias:          document.getElementById('dir-alias').value.trim(),
-                nombre:         document.getElementById('dir-nombre').value.trim(),
-                calle:          document.getElementById('dir-calle').value.trim(),
-                ciudad:         document.getElementById('dir-ciudad').value.trim(),
-                estado:         document.getElementById('dir-estado').value.trim(),
-                codigoPostal:   document.getElementById('dir-cp').value.trim(),
-                predeterminada: document.getElementById('dir-predet').checked,
-            };
-            var submitBtn = document.getElementById('dir-modal-submit');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Guardandoâ€¦';
-            try {
-                var url = editId ? '/api/addresses/' + editId : '/api/addresses';
-                var method = editId ? 'PUT' : 'POST';
-                var res = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
-                var data = await res.json();
-                if (data.ok) {
-                    renderDirecciones(data.addresses);
-                    closeDirModal();
-                } else {
-                    if (dirErr) {
-                        dirErr.textContent = data.error || 'Error al guardar.';
-                        dirErr.style.display = 'block';
-                    }
-                }
-            } catch {
-                if (dirErr) { dirErr.textContent = 'Error de red.'; dirErr.style.display = 'block'; }
-            }
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Guardar direcciÃ³n';
-        });
-    }
-
-    loadDirecciones();
-
-        document.getElementById('pedidos-list').addEventListener('click', function (e) {
-            var t = e.target.closest('[data-demo]');
-            if (!t) return;
-            var k = t.getAttribute('data-demo');
-            window.alert(
-                k === 'rastreo'
-                    ? 'Demo: seguimiento del envÃ­o con el transportista.'
-                    : 'Demo: descarga o vista de factura en PDF.'
-            );
-        });
-    }
-
     function applyHash() {
         var h = (window.location.hash || '').replace(/^#/, '').toLowerCase();
         var allowed = ['resumen', 'pedidos', 'direcciones', 'datos', 'seguridad'];
@@ -745,43 +798,34 @@
     }
 
     function mercaIniciarSimulacion() {
-        // Buscar el pedido mas reciente en estado "confirmado"
+        if (!DEMO_ORDERS || DEMO_ORDERS.length === 0) return;
         var pedido = null;
         for (var i = 0; i < DEMO_ORDERS.length; i++) {
-            var est = (DEMO_ORDERS[i].estado || '').toLowerCase();
-            if (est === 'confirmado') { pedido = DEMO_ORDERS[i]; break; }
+            if (DEMO_ORDERS[i].estado === 'confirmado') {
+                pedido = DEMO_ORDERS[i];
+                break;
+            }
         }
-        if (!pedido) {
-            console.log('[SIM] No hay pedidos en estado confirmado.');
-            return;
-        }
-        var orderId = Number(pedido.id);
-        console.log('[SIM] Simular pedido:', pedido.codigo, 'ID:', orderId);
+        if (!pedido) return;
 
+        var orderId = pedido.id;
         var estados = ['procesando', 'enviado', 'entregado'];
-        var tiempos = [15000, 30000, 45000];
+        var tiempos = [15000, 35000, 60000];
 
-        estados.forEach(function(est, i) {
-            setTimeout(function() {
-                console.log('[SIM] -> Cambiando a', est);
-                // Actualizar en memoria
-                DEMO_ORDERS.forEach(function(o) {
-                    if (Number(o.id) === orderId) { o.estado = est; }
-                });
-                // Actualizar en servidor (best-effort)
+        estados.forEach(function (nuevoEstado, i) {
+            window.setTimeout(function () {
                 fetch('/api/orders/' + orderId + '/status', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ estado: est })
-                }).then(function(r){ console.log('[SIM] Servidor:', r.status); })
-                  .catch(function(e){ console.warn('[SIM] Servidor no actualizado:', e); });
-                // Refrescar UI
+                    body: JSON.stringify({ estado: nuevoEstado }),
+                }).catch(function () {});
+
+                pedido.estado = nuevoEstado;
                 renderUltimoPedido();
                 renderPedidos();
             }, tiempos[i]);
         });
     }
-
 
     async function init() {
         if (!mercaGetSession()) {
@@ -789,7 +833,8 @@
             return;
         }
         var s = mercaGetSession();
-        document.getElementById('cuenta-greet').textContent = 'Â¡Hola, ' + s.nombre + '!';
+        var greetEl = document.getElementById('cuenta-greet');
+        if (greetEl) greetEl.textContent = '¡Hola, ' + s.nombre + '!';
 
         // Cargar pedidos desde la API
         try {
@@ -804,6 +849,7 @@
         renderPedidos();
         loadProfileForm();
         bindCuentaUi();
+        await loadDirecciones();
 
         // Si es administrador, agregar tarjeta de acceso al panel admin
         if (s && ['adminpro', 'adminjunior'].includes(s.rol)) {
@@ -821,10 +867,7 @@
         }
 
         applyHash();
-
-        // Iniciar simulaciÃ³n si aplica
         mercaIniciarSimulacion();
-
         window.addEventListener('hashchange', applyHash);
     }
 

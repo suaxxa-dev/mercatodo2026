@@ -610,10 +610,31 @@
 
     // --- Configuración de Eventos UI y Filtros ---
     function setupEvents() {
+        // Mobile Sidebar Toggle
+        const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+
+        if (btnToggleSidebar && sidebar) {
+            btnToggleSidebar.addEventListener('click', () => {
+                sidebar.classList.toggle('mobile-open');
+                if (backdrop) backdrop.classList.toggle('is-visible', sidebar.classList.contains('mobile-open'));
+            });
+        }
+
+        if (backdrop && sidebar) {
+            backdrop.addEventListener('click', () => {
+                sidebar.classList.remove('mobile-open');
+                backdrop.classList.remove('is-visible');
+            });
+        }
+
         // Navegación de sidebar
         document.querySelectorAll('.nav-btn[data-panel]').forEach(btn => {
             btn.addEventListener('click', () => {
                 adminSwitchPanel(btn.dataset.panel);
+                if (sidebar) sidebar.classList.remove('mobile-open');
+                if (backdrop) backdrop.classList.remove('is-visible');
             });
         });
 

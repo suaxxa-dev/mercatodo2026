@@ -92,15 +92,20 @@
                 <button type="button" class="nav-btn btn-logout" id="btn-admin-logout">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     <span>Cerrar Sesión</span>
-                </button>
             </div>
         </aside>
+
+        <!-- Backdrop para móvil -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
         <!-- Main Content Area -->
         <main class="admin-main">
             <!-- Topbar -->
             <header class="admin-topbar">
                 <div class="topbar-title">
+                    <button type="button" class="btn-toggle-sidebar" id="btn-toggle-sidebar" aria-label="Abrir menú">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
                     <h2 id="topbar-view-title">Dashboard General</h2>
                 </div>
                 <div class="topbar-actions">

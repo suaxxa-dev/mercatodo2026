@@ -36,8 +36,15 @@ function createApiRouter(controllers) {
     profileController,
     addressController,
     searchController,
+    productController,
     adminController
   } = controllers;
+
+  // Products (Público)
+  if (productController) {
+    router.get('/products', productController.getProducts);
+    router.get('/products/:id', productController.getProductById);
+  }
 
   // Auth
   router.post('/auth/register', authController.register);
